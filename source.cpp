@@ -77,6 +77,13 @@ void playGame() {
  * @param p - the current player
  */
 void makeMove(vector<vector<int> >& b, int c, unsigned int p) {
+	if(c == -1){
+		for (unsigned int col = 0; col < NUM_COL; col++) { // for each possible move
+				if (b[NUM_ROW - 1][col] == 0) {
+					c = col;
+				}
+		}
+	}
 	// start from bottom of board going up
 	for (unsigned int r = 0; r < NUM_ROW; r++) {
 		if (b[r][c] == 0) { // first available spot
@@ -154,14 +161,14 @@ array<float, 2> miniMax(vector<vector<int> > &b, unsigned int d, float alf, floa
 	 */
 	if (d == 0) {
 		// get current score to return
-		return array<float, 2>{tabScore(b, COMPUTER) - tabScore(b , PLAYER), -1};
+		return array<float, 2>{tabScore(b, COMPUTER) , -1};
 		//- tabScore(b , PLAYER)
 	}
 	if (p == COMPUTER) { // if AI player
 		array<float, 2> moveSoFar = {float(INT_MIN), -1}; // since maximizing, we want lowest possible value
-		// if (winningMove(b, PLAYER)) { // if player about to win
-		// 	return moveSoFar; // force it to say it's worst possible score, so it knows to avoid move
-		// } // otherwise, business as usual
+		if (winningMove(b, PLAYER) > winningMove(b, COMPUTER)) { // if player about to win
+			return moveSoFar; // force it to say it's worst possible score, so it knows to avoid move
+		} // otherwise, business as usual
 		for (unsigned int c = 0; c < NUM_COL; c++) { // for each possible move
 			if (b[NUM_ROW - 1][c] == 0) { // but only if that column is non-full
 				vector<vector<int> > newBoard = copyBoard(b); // make a copy of the board
@@ -178,9 +185,9 @@ array<float, 2> miniMax(vector<vector<int> > &b, unsigned int d, float alf, floa
 	}
 	else {
 		array<float, 2> moveSoFar = {float(INT_MAX), -1}; // since PLAYER is minimized, we want moves that diminish this score
-		// if (winningMove(b, COMPUTER)) {
-		// 	return moveSoFar; // if about to win, report that move as best
-		// }
+		if (winningMove(b, COMPUTER) > winningMove(b, PLAYER)) { // if player about to win
+			return moveSoFar; // force it to say it's worst possible score, so it knows to avoid move
+		}
 		for (unsigned int c = 0; c < NUM_COL; c++) {
 			if (b[NUM_ROW - 1][c] == 0) {
 				vector<vector<int> > newBoard = copyBoard(b);
@@ -197,6 +204,9 @@ array<float, 2> miniMax(vector<vector<int> > &b, unsigned int d, float alf, floa
 	}
 }
 
+vector <float> exp_cols = {-1,-1,-1,-1,-1,-1,-1};
+vector <float> exp_cols_min = {-1,-1,-1,-1,-1,-1,-1};
+
 array<float,2> expected_minimax(const std::vector<std::vector<int>>& board, int depth, unsigned int maximizing_player, const std::vector<float>& column_probabilities) {
     if (depth == 0) {
         return array<float, 2>{tabScore(board, COMPUTER) - tabScore(board, PLAYER),-1};
@@ -204,7 +214,7 @@ array<float,2> expected_minimax(const std::vector<std::vector<int>>& board, int 
 
     if (maximizing_player == COMPUTER) {
         array<float,2> max_eval = {float(INT_MIN),-1};
-        vector <float> exp_cols = {-1,-1,-1,-1,-1,-1,-1};
+        
         for (unsigned int c = 0; c < NUM_COL; c++) { // for each possible move
 			if (board[NUM_ROW - 1][c] == 0) {
             // Apply the probabilities for left, center, and right columns
@@ -215,27 +225,27 @@ array<float,2> expected_minimax(const std::vector<std::vector<int>>& board, int 
 			makeMove(newBoard, c, maximizing_player);
             float eval_score = 0;
             if(exp_cols[c] == -1){
-                eval_score += prob_current_col * expected_minimax(newBoard, depth - 1, PLAYER, column_probabilities)[0];
-            } else {
+                exp_cols[c] = expected_minimax(newBoard, depth - 1, PLAYER, column_probabilities)[0];
+            } 
                 eval_score += exp_cols[c]*prob_current_col;
-            }
+            
             if(c < NUM_COL  - 1){
             vector<vector<int> > newBoard_right = copyBoard(board); // make a copy of the board
 			makeMove(newBoard, c + 1, maximizing_player);
             if(exp_cols[c + 1] == -1){
-                eval_score += prob_right_col * expected_minimax(newBoard_right, depth - 1, PLAYER, column_probabilities)[0];
-            } else {
+                exp_cols[c + 1] = expected_minimax(newBoard_right, depth - 1, PLAYER, column_probabilities)[0];
+            } 
                 eval_score += exp_cols[c+1]*prob_right_col;
-            }
+            
             }
             if(c > 0){
             vector<vector<int> > newBoard_left = copyBoard(board); // make a copy of the board
 			makeMove(newBoard, c - 1, maximizing_player);
             if(exp_cols[c - 1] == -1){
-                eval_score += prob_left_col * expected_minimax(newBoard_left, depth - 1, PLAYER, column_probabilities)[0];
-            } else {
+                exp_cols[c - 1] = expected_minimax(newBoard_left, depth - 1, PLAYER, column_probabilities)[0];
+            } 
                 eval_score += exp_cols[c-1]*prob_left_col;
-            }
+            
             }
 			if(eval_score > max_eval[0]){
 				max_eval = {eval_score , (float)c};
@@ -245,7 +255,6 @@ array<float,2> expected_minimax(const std::vector<std::vector<int>>& board, int 
         return max_eval;
     } else {
         array<float,2> min_eval = {float(INT_MAX), -1};
-        vector <float> exp_cols = {-1,-1,-1,-1,-1,-1,-1};
         for (unsigned int c = 0; c < NUM_COL; c++) { // for each possible move
 			if (board[NUM_ROW - 1][c] == 0) {
             // Apply the probabilities for left, center, and right columns
@@ -255,28 +264,28 @@ array<float,2> expected_minimax(const std::vector<std::vector<int>>& board, int 
 			vector<vector<int> > newBoard = copyBoard(board); // make a copy of the board
 			makeMove(newBoard, c, maximizing_player);
             float eval_score = 0;
-            if(exp_cols[c] == -1){
-                eval_score += prob_current_col * expected_minimax(newBoard, depth - 1, COMPUTER, column_probabilities)[0];
-            } else {
-                eval_score += exp_cols[c]*prob_current_col;
-            }
+            if(exp_cols_min[c] == -1){
+				exp_cols_min[c] = expected_minimax(newBoard, depth - 1, COMPUTER, column_probabilities)[0];
+            } 
+                eval_score += exp_cols_min[c]*prob_current_col;
+            
             if(c < NUM_COL  - 1){
             vector<vector<int> > newBoard_right = copyBoard(board); // make a copy of the board
 			makeMove(newBoard, c + 1, maximizing_player);
-            if(exp_cols[c + 1] == -1){
-                eval_score += prob_right_col * expected_minimax(newBoard_right, depth - 1, COMPUTER, column_probabilities)[0];
-            } else {
-                eval_score += exp_cols[c+1]*prob_right_col;
+            if(exp_cols_min[c + 1] == -1){
+                exp_cols_min[c + 1] = expected_minimax(newBoard_right, depth - 1, COMPUTER, column_probabilities)[0];
             }
+                eval_score += exp_cols_min[c+1]*prob_right_col;
+            
             }
             if(c > 0){
             vector<vector<int> > newBoard_left = copyBoard(board); // make a copy of the board
 			makeMove(newBoard, c - 1, maximizing_player);
-            if(exp_cols[c - 1] == -1){
-                eval_score += prob_left_col * expected_minimax(newBoard_left, depth - 1, COMPUTER, column_probabilities)[0];
-            } else {
-                eval_score += exp_cols[c-1]*prob_left_col;
+            if(exp_cols_min[c - 1] == -1){
+                exp_cols_min[c - 1] = expected_minimax(newBoard_left, depth - 1, COMPUTER, column_probabilities)[0];
             }
+                eval_score += exp_cols_min[c-1]*prob_left_col;
+            
             }
 
             if(eval_score < min_eval[0]){
@@ -303,25 +312,25 @@ float tabScore(vector<vector<int> > b, unsigned int p) {
     for (int row = 0; row < NUM_ROW; row++) {
         for (int col = 0; col < 4; col++) {
             if (board[row][col] == p && board[row][col + 1] == p && board[row][col + 2] == p && board[row][col + 3] == 0) {
-                score += 10;
+                score += 20;
             }
         }
     }
     for (int row = 0; row < 3; row++) {
         for (int col = 0; col < NUM_COL; col++) {
             if (board[row][col] == p && board[row + 1][col] == p && board[row + 2][col] == p && board[row + 3][col] == 0) {
-                score += 10;
+                score += 20;
             }
         }
     }
     for (int row = 0; row < 3; row++) {
         for (int col = 0; col < 4; col++) {
             if (board[row][col] == p && board[row + 1][col + 1] == p && board[row + 2][col + 2] == p && board[row + 3][col + 3] == 0) {
-                score += 10;
+                score += 20;
             }
 
             if (board[row][col + 3] == 0 && board[row + 1][col + 2] == p && board[row + 2][col + 1] == p && board[row + 3][col] == p) {
-                score += 10;
+                score += 20;
             }
         }
     }
