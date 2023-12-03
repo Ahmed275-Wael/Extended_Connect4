@@ -34,7 +34,7 @@ const float weights[6][7] = {{1,2,4,8,4,2,1}, {2,4,8,12,8,4,2},{4,6,10,16,10,6,4
 bool gameOver = false; // flag for if game is over
 unsigned int turns = 0; // count for # turns
 unsigned int currentPlayer = PLAYER; // current player
-
+int id  = 2;
 
 vector<vector<int>> board(NUM_ROW, vector<int>(NUM_COL)); // the game board
 
@@ -138,10 +138,16 @@ int userMove() {
  * @return - the column number for best move
  */
 int aiMove() {
+
 	cout << "AI is thinking about a move..." << endl;
-	vector<float> col_probs = {0.6, 0.2, 0.2};
-	//cout<<expected_minimax(board, -1,MAX_DEPTH, COMPUTER , float(INT_MIN), float(INT_MAX), false, col_probs)[1]<<endl;
-	return static_cast<int>(expected_minimax(board, -1,MAX_DEPTH, COMPUTER , float(INT_MIN), float(INT_MAX), false, col_probs)[1]);
+	if(id == 1){
+		int col = static_cast<int>(miniMax(board, MAX_DEPTH, 0 - INT_MAX, INT_MAX, COMPUTER)[1]);
+    	return col;
+	} else {
+		vector<float> col_probs = {0.6, 0.2, 0.2};
+		//cout<<expected_minimax(board, -1,MAX_DEPTH, COMPUTER , float(INT_MIN), float(INT_MAX), false, col_probs)[1]<<endl;
+		return static_cast<int>(expected_minimax(board, -1,MAX_DEPTH, COMPUTER , float(INT_MIN), float(INT_MAX), false, col_probs)[1]);
+	}
 }
 
 /**
@@ -182,6 +188,10 @@ array<float, 2> miniMax(vector<vector<int> > &b, unsigned int d, float alf, floa
 					moveSoFar = {score, (float)c};
 				}
 				alf = max(alf, moveSoFar[0]);
+				// cout<<"==============================="<<endl;
+				// printBoard(newBoard);
+				// cout<<"player = "<< p <<" ,depth = "<< MAX_DEPTH - d << " ,alpha = "<< alf << " ,beta = "<< bet << endl; 
+				// cout<<"==============================="<<endl;
 				if (alf >= bet) { break; } // for pruning
 			}
 		}
@@ -201,6 +211,10 @@ array<float, 2> miniMax(vector<vector<int> > &b, unsigned int d, float alf, floa
 					moveSoFar = {score, (float)c};
 				}
 				bet = min(bet, moveSoFar[0]);
+				// cout<<"==============================="<<endl;
+				// printBoard(newBoard);
+				// cout<<"player = "<< p <<" ,depth = "<< MAX_DEPTH - d << " ,alpha = "<< alf << " ,beta = "<< bet << endl; 
+				// cout<<"==============================="<<endl;
 				if (alf >= bet) { break; }
 			}
 		}
@@ -256,16 +270,16 @@ array<float,2> expected_minimax(std::vector<std::vector<int>>& board, int col, i
 		vector<vector<int> > newBoard = copyBoard(board); // make a copy of the board
 		makeMove(newBoard, col, player);
 		float eval_score = 0;
-		eval_score += expected_minimax(newBoard, -1, depth - 1, 3 - player, alpha, beta, false, column_probabilities)[0]*prob_current_col;
+		eval_score += expected_minimax(newBoard, -1, depth , 3 - player, alpha, beta, false, column_probabilities)[0]*prob_current_col;
 		if(col < NUM_COL  - 1){
 			vector<vector<int> > newBoard_right = copyBoard(board); // make a copy of the board
 			makeMove(newBoard, col + 1, player);
-			eval_score += expected_minimax(newBoard_right, -1, depth - 1, 3 - player, alpha, beta, false, column_probabilities)[0]*prob_right_col;
+			eval_score += expected_minimax(newBoard_right, -1, depth , 3 - player, alpha, beta, false, column_probabilities)[0]*prob_right_col;
 		}
 		if(col > 0){
 			vector<vector<int> > newBoard_left = copyBoard(board); // make a copy of the board
 			makeMove(newBoard, col - 1, player);
-			eval_score += expected_minimax(newBoard_left, -1, depth - 1, 3 - player, alpha, beta, false, column_probabilities)[0]*prob_left_col;
+			eval_score += expected_minimax(newBoard_left, -1, depth , 3 - player, alpha, beta, false, column_probabilities)[0]*prob_left_col;
 		}
 
 		return array<float,2>{eval_score, -1};
@@ -370,8 +384,8 @@ float heurFunction(unsigned int g, unsigned int b, unsigned int z) {
 	else if (g == 3 && z == 1) { score += 30; }
 	else if (g == 2 && z == 2) { score += 20; }
 	else if (b == 2 && z == 2) { score -= 10; } // لست قلقا
-	else if (b == 3 && z == 1) { score -= 50; } // preference to block
-	else if (b == 4) { score -= 100; }
+	else if (b == 3 && z == 1) { score -= 70; } // preference to block
+	else if (b == 4) { score -= 150; }
 	return score;
 }
 
